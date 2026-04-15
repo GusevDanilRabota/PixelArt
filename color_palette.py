@@ -48,7 +48,7 @@ class PaletteModel:
 
 
 class ColorSwatch(QPushButton):
-    """Виджет для отображения одного цвета в палитре (только выбор)."""
+    """Виджет для отображения одного цвета в палитре."""
     clicked_with_index = pyqtSignal(int)
 
     def __init__(self, index, color):
@@ -58,14 +58,14 @@ class ColorSwatch(QPushButton):
         self.setFixedSize(30, 30)
         self.setCheckable(True)
         self.clicked.connect(self.emit_index)
-        self.update_style()
+        self.update_style()  # обновляем фон в зависимости от цвета
 
     def emit_index(self):
         self.clicked_with_index.emit(self.index)
 
     def update_style(self):
-        style = f"background-color: {self.color.name()}; border: 1px solid #888;"
-        self.setStyleSheet(style)
+        # Используем только цвет фона, границы и другие свойства задаются в QSS
+        self.setStyleSheet(f"background-color: {self.color.name()};")
 
 
 class PaletteWidget(QWidget):

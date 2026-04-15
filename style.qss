@@ -1,0 +1,224 @@
+/* style.qss - Единая тёмная тема для PixelArt */
+
+/* ---------- ОСНОВНЫЕ ЭЛЕМЕНТЫ ---------- */
+QMainWindow {
+    background-color: #2b2b2b;
+}
+
+QWidget {
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 12px;
+}
+
+QSplitter::handle {
+    background-color: #3c3c3c;
+}
+QSplitter::handle:horizontal {
+    width: 4px;
+}
+QSplitter::handle:vertical {
+    height: 4px;
+}
+
+/* ---------- СТРОКА СОСТОЯНИЯ ---------- */
+QStatusBar {
+    background-color: #3c3c3c;
+    color: #aaa;
+}
+QStatusBar::item {
+    border: none;
+}
+
+/* ---------- ВКЛАДКИ (ЛЕВАЯ ПАНЕЛЬ) ---------- */
+QTabWidget::pane {
+    border: 1px solid #444;
+    background: #2b2b2b;
+    border-radius: 4px;
+}
+QTabBar::tab {
+    background: #3c3c3c;
+    color: #ccc;
+    padding: 8px 16px;
+    margin-right: 2px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+}
+QTabBar::tab:selected {
+    background: #505050;
+    color: #fff;
+}
+QTabBar::tab:hover:!selected {
+    background: #4a4a4a;
+}
+
+/* ---------- ТЕКСТОВОЕ ПОЛЕ (ФАЙЛОВОЕ ДЕРЕВО) ---------- */
+QTextEdit {
+    background-color: #1e1e1e;
+    color: #ddd;
+    border: 1px solid #444;
+    border-radius: 4px;
+    font-family: Consolas, monospace;
+}
+
+/* ---------- КНОПКИ ---------- */
+QPushButton {
+    background-color: #3c3c3c;
+    color: #eee;
+    border: 1px solid #555;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-weight: bold;
+    outline: none;
+}
+QPushButton:hover {
+    background-color: #505050;
+    border: 1px solid #777;
+}
+QPushButton:pressed {
+    background-color: #2a2a2a;
+}
+QPushButton:checked {
+    background-color: #5a5a5a;
+    border: 1px solid #888;
+}
+QPushButton:disabled {
+    background-color: #2a2a2a;
+    color: #888;
+    border: 1px solid #444;
+}
+
+/* Кнопки инструментов (сделаем их чуть больше) */
+#pen_btn, #eraser_btn, #eyedropper_btn {
+    padding: 8px;
+    text-align: left;
+}
+
+/* ---------- СПИСОК КАДРОВ ---------- */
+QListWidget {
+    background-color: #1e1e1e;
+    color: #ddd;
+    border: 1px solid #444;
+    border-radius: 4px;
+    outline: none;
+}
+QListWidget::item {
+    padding: 6px;
+    border-bottom: 1px solid #333;
+}
+QListWidget::item:selected {
+    background-color: #505050;
+    color: #fff;
+}
+QListWidget::item:hover {
+    background-color: #3a3a3a;
+}
+
+/* ---------- ПРОКРУТКА (SCROLLBARS) ---------- */
+QScrollBar:vertical {
+    background: #2b2b2b;
+    width: 12px;
+    border-radius: 6px;
+}
+QScrollBar::handle:vertical {
+    background: #5a5a5a;
+    border-radius: 6px;
+    min-height: 20px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #7a7a7a;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    border: none;
+    background: none;
+}
+QScrollBar:horizontal {
+    background: #2b2b2b;
+    height: 12px;
+    border-radius: 6px;
+}
+QScrollBar::handle:horizontal {
+    background: #5a5a5a;
+    border-radius: 6px;
+    min-width: 20px;
+}
+QScrollBar::handle:horizontal:hover {
+    background: #7a7a7a;
+}
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    border: none;
+    background: none;
+}
+
+/* ---------- СПИНБОКСЫ ---------- */
+QSpinBox {
+    background-color: #1e1e1e;
+    color: #ddd;
+    border: 1px solid #555;
+    padding: 4px;
+    border-radius: 4px;
+}
+QSpinBox::up-button, QSpinBox::down-button {
+    background-color: #3c3c3c;
+    border-radius: 2px;
+}
+QSpinBox::up-button:hover, QSpinBox::down-button:hover {
+    background-color: #505050;
+}
+
+/* ---------- СЛАЙДЕР (ЗУМ) ---------- */
+QSlider::groove:horizontal {
+    height: 6px;
+    background: #3c3c3c;
+    border-radius: 3px;
+}
+QSlider::handle:horizontal {
+    background: #aaa;
+    width: 16px;
+    height: 16px;
+    margin: -5px 0;
+    border-radius: 8px;
+}
+QSlider::handle:horizontal:hover {
+    background: #ddd;
+}
+QSlider::sub-page:horizontal {
+    background: #5a5a5a;
+    border-radius: 3px;
+}
+
+/* ---------- МЕТКИ ---------- */
+QLabel {
+    color: #ccc;
+}
+
+/* ---------- ОБЛАСТЬ ПРОКРУТКИ (ХОЛСТ) ---------- */
+QScrollArea {
+    background-color: #2b2b2b;
+    border: none;
+}
+
+/* ---------- ОБРАЗЦЫ ПАЛИТРЫ (COLOR SWATCH) ---------- */
+ColorSwatch {
+    border: 1px solid #888;
+    border-radius: 2px;
+}
+ColorSwatch:checked {
+    border: 3px solid #ffffff;
+}
+ColorSwatch:hover {
+    border: 2px solid #aaa;
+}
+
+/* ---------- ПАНЕЛЬ АНИМАЦИИ ---------- */
+AnimationPanel {
+    background-color: #2b2b2b;
+}
+
+/* ---------- ПОДСКАЗКИ ---------- */
+QToolTip {
+    background-color: #333;
+    color: #ddd;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 4px;
+}
