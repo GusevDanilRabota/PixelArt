@@ -1,10 +1,13 @@
 # drawing_panel.py
 from PyQt5.QtWidgets import QWidget
-from PyQt5.QtCore import Qt, QRect, pyqtSignal, QPoint
-from PyQt5.QtGui import QPainter, QPen, QColor, QBrush, QCursor
+from PyQt5.QtCore import Qt, QPoint, QRect, pyqtSignal
+from PyQt5.QtGui import QPainter, QPen, QColor, QBrush, QCursor, QImage
 
 class DrawingPanel(QWidget):
-    colorPicked = pyqtSignal(int)  # новый сигнал
+    colorPicked = pyqtSignal(int)
+    cursorMoved = pyqtSignal(int, int)
+    colorChanged = pyqtSignal(QColor)
+
     MAX_UNDO = 50
 
     def __init__(self, palette_model, grid_width=32, grid_height=32, pixel_size=20):
@@ -25,15 +28,16 @@ class DrawingPanel(QWidget):
         self.last_pan_pos = None
         self.space_pressed = False
         
+        # Undo/Redo
+        self.undo_stack = []
+        self.redo_stack = []
+        self._push_undo_state()
+        
         self.setFocusPolicy(Qt.StrongFocus)
         self._update_minimum_size()
 
-        self.undo_stack = []
-        self.redo_stack = []
-        self._push_undo_state()  # начальное состояние
-
     def undo(self):
-        if len(self.undo_stack) > 1:  # последнее состояние текущее
+        if len(self.undo_stack) > 1:
             current = self.undo_stack.pop()
             self.redo_stack.append(current)
             prev = self.undo_stack[-1]
@@ -156,7 +160,6 @@ class DrawingPanel(QWidget):
 
     def set_pixel(self, x, y, color_index):
         if 0 <= x < self.grid_width and 0 <= y < self.grid_height:
-            # Сохраняем состояние перед изменением, если пиксель меняется
             old = self.pixels.get((x, y))
             if old != color_index:
                 self._push_undo_state()
@@ -205,6 +208,14 @@ class DrawingPanel(QWidget):
                 self._draw_at_mouse(event)
 
     def mouseMoveEvent(self, event):
+        # Отправляем координаты для статус-бара
+        x = (event.x() - self.pan_offset_x) // self.pixel_size
+        y = (event.y() - self.pan_offset_y) // self.pixel_size
+        if 0 <= x < self.grid_width and 0 <= y < self.grid_height:
+            self.cursorMoved.emit(x, y)
+        else:
+            self.cursorMoved.emit(-1, -1)
+
         if self.pan_active:
             delta = event.pos() - self.last_pan_pos
             self.pan_offset_x += delta.x()
@@ -281,3 +292,8 @@ class DrawingPanel(QWidget):
             painter.drawLine(x, 0, x, canvas_height)
         for y in range(0, canvas_height + 1, self.pixel_size):
             painter.drawLine(0, y, canvas_width, y)
+
+    def set_active_color(self, index):
+        """Вызывается при смене активного цвета в палитре."""
+        color = self.palette_model.get_color(index)
+        self.colorChanged.emit(color)

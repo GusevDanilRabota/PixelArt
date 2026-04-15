@@ -56,8 +56,8 @@ class WorkArea(QSplitter):
         self.color_panel.palette_widget.colorSelected.connect(self.on_color_selected)
 
     def on_color_selected(self, index):
-        pass
-
+        self.drawing_panel.set_active_color(index)
+        
     def on_add_frame(self):
         """Добавляет текущий холст как новый кадр."""
         pixels = self.drawing_panel.pixels
