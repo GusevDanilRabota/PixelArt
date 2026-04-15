@@ -1,5 +1,8 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QSplitter, QTextEdit, QVBoxLayout
+from PyQt5.QtWidgets import (
+    QApplication, QWidget, QSplitter, QTextEdit,
+    QVBoxLayout, QTabWidget
+)
 from PyQt5.QtCore import Qt
 
 class main_window_t(QWidget):
@@ -11,26 +14,37 @@ class main_window_t(QWidget):
         # Создаём сплиттер с горизонтальным разделением (лево-право)
         splitter = QSplitter(Qt.Horizontal)
 
-        # Файловое дерево/ Набор инструментов/ (текстовое поле)
-        files_tree_widget = QTextEdit()
-        files_tree_widget.setPlainText("Файловое дерево/ Набор инструментов/")
+        # --- Левая часть: вкладки ---
+        tab_widget = QTabWidget()
 
-        # Рабочая область (текстовое поле)
-        work_spase_widget = QTextEdit()
-        work_spase_widget.setPlainText("Рабочая область")
+        # Вкладка "Файловое дерево"
+        file_tree_tab = QTextEdit()
+        file_tree_tab.setPlainText("Здесь будет файловое дерево")
+        tab_widget.addTab(file_tree_tab, "Файлы")
 
-        # Опционально: минимальные ширины, чтобы ползунок не схлопывал часть до нуля
-        files_tree_widget.setMinimumWidth(50)
-        work_spase_widget.setMinimumWidth(50)
+        # Вкладка "Инструменты"
+        tools_tab = QTextEdit()
+        tools_tab.setPlainText("Здесь будут инструменты")
+        tab_widget.addTab(tools_tab, "Инструменты")
 
-        # Добавляем виджеты в сплиттер
-        splitter.addWidget(files_tree_widget)
-        splitter.addWidget(work_spase_widget)
+        # Можно добавить ещё вкладки при необходимости
 
-        # Начальные пропорции (ширина левой и правой частей)
-        splitter.setSizes([200, 400])
+        # --- Правая часть: рабочая область ---
+        work_space_widget = QTextEdit()
+        work_space_widget.setPlainText("Рабочая область")
 
-        # Размещаем сплиттер в окне
+        # Минимальные ширины
+        tab_widget.setMinimumWidth(200)
+        work_space_widget.setMinimumWidth(400)
+
+        # Добавляем в сплиттер
+        splitter.addWidget(tab_widget)
+        splitter.addWidget(work_space_widget)
+
+        # Начальные пропорции
+        splitter.setSizes([300, 600])
+
+        # Компоновка
         layout = QVBoxLayout()
         layout.addWidget(splitter)
         self.setLayout(layout)
