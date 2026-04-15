@@ -1,8 +1,13 @@
-from PyQt5.QtWidgets import QTextEdit
+# color_panel.py
+from PyQt5.QtWidgets import QWidget, QVBoxLayout
+from color_palette import PaletteWidget
 
-class ColorPanel(QTextEdit):
-    """Панель палитры (пока заглушка)"""
-    def __init__(self):
+class ColorPanel(QWidget):
+    """Панель палитры."""
+    def __init__(self, palette_model):
         super().__init__()
-        self.setPlainText("Палитра / выбор цвета")
-        self.setMinimumSize(150, 300)
+        layout = QVBoxLayout()
+        self.palette_widget = PaletteWidget(palette_model)
+        layout.addWidget(self.palette_widget)
+        self.setLayout(layout)
+        self.setMinimumSize(250, 300)

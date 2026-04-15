@@ -1,10 +1,14 @@
+# main_window.py
 from PyQt5.QtWidgets import (
     QMainWindow, QSplitter, QVBoxLayout, QStatusBar,
-    QAction, QWidget, QInputDialog
+    QAction, QWidget, QInputDialog, QFileDialog, QMessageBox
 )
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QImage, QPainter, QColor
 from left_panel import LeftPanel
 from work_area import WorkArea
+from PIL import Image
+import numpy as np
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -33,7 +37,6 @@ class MainWindow(QMainWindow):
     def _create_menu_bar(self):
         menubar = self.menuBar()
 
-        # Меню "Файл"
         file_menu = menubar.addMenu('Файл')
 
         new_action = QAction('Новый', self)
@@ -60,7 +63,6 @@ class MainWindow(QMainWindow):
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
 
-        # Меню "Помощь"
         help_menu = menubar.addMenu('Помощь')
         about_action = QAction('О программе', self)
         about_action.triggered.connect(self.on_about)
@@ -71,15 +73,54 @@ class MainWindow(QMainWindow):
         status.showMessage("Готов к работе")
         self.setStatusBar(status)
 
-    # Обработчики
     def on_new_file(self):
+        # Сброс размера холста к 32x32
+        self.work_area.drawing_panel.set_grid_size(32, 32)
+        # Сброс разрядности палитры к 8
+        self.work_area.palette_model.set_bit_depth(8)
+        self.work_area.color_panel.palette_widget.bit_depth_spin.setValue(8)
+        self.work_area.color_panel.palette_widget.update_palette()
+        # Очистка пикселей
         self.work_area.drawing_panel.clear()
 
     def on_open_file(self):
         print("Открыть файл")
 
     def on_save_file(self):
-        print("Сохранить файл")
+        file_path, _ = QFileDialog.getSaveFileName(self, "Сохранить изображение", "", "PNG Files (*.png)")
+        if not file_path:
+            return
+
+        w = self.work_area.drawing_panel.grid_width
+        h = self.work_area.drawing_panel.grid_height
+        palette_model = self.work_area.palette_model
+
+        indices = np.zeros((h, w), dtype=np.uint8)
+        for (x, y), index in self.work_area.drawing_panel.pixels.items():
+            if 0 <= x < w and 0 <= y < h:
+                indices[y, x] = index
+
+        palette = []
+        for color in palette_model.colors[:palette_model.max_colors]:
+            palette.extend([color.red(), color.green(), color.blue()])
+        while len(palette) < 768:
+            palette.extend([0, 0, 0])
+
+        img = Image.fromarray(indices, mode='P')
+        img.putpalette(palette)
+
+        transparent_index = None
+        for i, color in enumerate(palette_model.colors):
+            if color.alpha() == 0:
+                transparent_index = i
+                break
+
+        if transparent_index is not None:
+            transparency = bytes([0 if i == transparent_index else 255 for i in range(palette_model.max_colors)])
+            img.info['transparency'] = transparency
+
+        img.save(file_path, format='PNG', transparency=transparent_index)
+        QMessageBox.information(self, "Сохранение", f"Изображение сохранено в {file_path}")
 
     def on_about(self):
         print("О программе PixelArt")
