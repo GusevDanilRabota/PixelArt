@@ -1,9 +1,14 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget
 
-app = QApplication(sys.argv)        # Создаём приложение
-window = QWidget()                  # Создаём виджет (окно)
-window.setWindowTitle("PixelArt")   # Заголовок окна
-window.resize(1920, 1080)             # Размер окна (ширина, высота)
-window.show()                       # Показываем окно
-sys.exit(app.exec_())               # Запускаем главный цикл обработки событий
+class MainWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("PixelArt")   # Заголовок окна
+        self.resize(1920, 1080)             # Размер окна (ширина, высота)
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec_())
