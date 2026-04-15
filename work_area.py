@@ -12,7 +12,7 @@ class WorkArea(QSplitter):
 
         # Верхняя часть
         top_splitter = QSplitter(Qt.Horizontal)
-        self.drawing_panel = DrawingPanel()
+        self.drawing_panel = DrawingPanel()  # Используем новый класс с сеткой
         self.color_panel = ColorPanel()
         top_splitter.addWidget(self.drawing_panel)
         top_splitter.addWidget(self.color_panel)
