@@ -1,4 +1,5 @@
 from PyQt5.QtWidgets import QTabWidget, QTextEdit
+from tools_panel import ToolsPanel
 
 class LeftPanel(QTabWidget):
     """Левая панель с вкладками Файлы / Инструменты"""
@@ -10,6 +11,5 @@ class LeftPanel(QTabWidget):
         file_tree.setPlainText("Файловое дерево")
         self.addTab(file_tree, "Файлы")
 
-        tools = QTextEdit()
-        tools.setPlainText("Инструменты")
-        self.addTab(tools, "Инструменты")
+        self.tools_panel = ToolsPanel()
+        self.addTab(self.tools_panel, "Инструменты")

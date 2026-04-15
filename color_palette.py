@@ -75,14 +75,12 @@ class PaletteWidget(QWidget):
         super().__init__()
         self.model = model
         self.swatches = []
-        self.max_rows_per_column = 10  # максимальное количество строк в столбце
+        self.max_rows_per_column = 10
         self.setup_ui()
         self.update_palette()
 
     def setup_ui(self):
         main_layout = QVBoxLayout(self)
-
-        # Управление разрядностью
         control_layout = QVBoxLayout()
         control_layout.addWidget(QLabel("Разрядность:"))
         self.bit_depth_spin = QSpinBox()
@@ -92,7 +90,6 @@ class PaletteWidget(QWidget):
         control_layout.addWidget(self.bit_depth_spin)
         main_layout.addLayout(control_layout)
 
-        # Область прокрутки для сетки цветов
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
@@ -107,46 +104,35 @@ class PaletteWidget(QWidget):
         main_layout.addWidget(self.scroll_area)
 
     def update_palette(self):
-        # Очищаем старые образцы
         for swatch in self.swatches:
             swatch.deleteLater()
         self.swatches.clear()
 
-        # Удаляем все элементы из сетки
         for i in reversed(range(self.grid_layout.count())):
             item = self.grid_layout.itemAt(i)
             if item.widget():
                 item.widget().setParent(None)
 
-        # Создаём новые образцы
         for i, color in enumerate(self.model.colors):
             swatch = ColorSwatch(i, color)
             swatch.clicked_with_index.connect(self.select_color)
             self.swatches.append(swatch)
 
-        # Размещаем образцы в сетке с переносом по столбцам
         self.relayout_swatches()
 
-        # Выделяем активный цвет
         if self.model.active_color_index < len(self.swatches):
             self.swatches[self.model.active_color_index].setChecked(True)
 
     def relayout_swatches(self):
-        """Размещает образцы в несколько столбцов, заполняя сверху вниз."""
         n = len(self.swatches)
         if n == 0:
             return
-
-        # Количество столбцов: ceil(n / max_rows_per_column)
         cols = (n + self.max_rows_per_column - 1) // self.max_rows_per_column
         rows = self.max_rows_per_column
-
         for idx, swatch in enumerate(self.swatches):
             col = idx // rows
             row = idx % rows
             self.grid_layout.addWidget(swatch, row, col)
-
-        # Устанавливаем одинаковое растяжение столбцов
         for c in range(cols):
             self.grid_layout.setColumnStretch(c, 1)
 
@@ -160,3 +146,7 @@ class PaletteWidget(QWidget):
     def on_bit_depth_changed(self, value):
         self.model.set_bit_depth(value)
         self.update_palette()
+
+    def set_active_color(self, index):
+        if 0 <= index < len(self.swatches):
+            self.select_color(index)

@@ -1,7 +1,6 @@
-# work_area.py
-from PyQt5.QtWidgets import QSplitter
+from PyQt5.QtWidgets import QSplitter, QWidget, QHBoxLayout, QVBoxLayout
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap, QImage, QColor
+from PyQt5.QtGui import QPixmap, QImage
 from drawing_panel import DrawingPanel
 from color_panel import ColorPanel
 from animation_panel import AnimationPanel, AnimationModel
@@ -15,20 +14,43 @@ class WorkArea(QSplitter):
         self.palette_model = PaletteModel(bit_depth=8)
         self.animation_model = AnimationModel()
 
-        top_splitter = QSplitter(Qt.Horizontal)
-        self.drawing_panel = DrawingPanel(self.palette_model)
-        self.color_panel = ColorPanel(self.palette_model)
-        top_splitter.addWidget(self.drawing_panel)
-        top_splitter.addWidget(self.color_panel)
-        top_splitter.setSizes([600, 200])
+        # --- Верхняя часть: холст (по центру) и палитра ---
+        top_widget = QWidget()
+        top_layout = QHBoxLayout(top_widget)
+        top_layout.setContentsMargins(0, 0, 0, 0)
+        top_layout.setSpacing(0)
 
+        # Контейнер для центрирования холста
+        canvas_container = QWidget()
+        canvas_layout = QVBoxLayout(canvas_container)
+        canvas_layout.setContentsMargins(0, 0, 0, 0)
+        canvas_layout.setSpacing(0)
+
+        self.drawing_panel = DrawingPanel(self.palette_model)
+
+        # Добавляем растяжения со всех сторон, чтобы холст был по центру
+        canvas_layout.addStretch(1)
+        h_layout = QHBoxLayout()
+        h_layout.addStretch(1)
+        h_layout.addWidget(self.drawing_panel)
+        h_layout.addStretch(1)
+        canvas_layout.addLayout(h_layout)
+        canvas_layout.addStretch(1)
+
+        self.color_panel = ColorPanel(self.palette_model)
+
+        top_layout.addWidget(canvas_container, 1)  # холст занимает всё доступное пространство
+        top_layout.addWidget(self.color_panel, 0)  # палитра фиксированной ширины
+
+        self.addWidget(top_widget)
+
+        # --- Нижняя часть: панель анимации ---
         self.animation_panel = AnimationPanel(self.animation_model)
         self.animation_panel.frameAdded.connect(self.on_add_frame)
         self.animation_panel.frameSelected.connect(self.on_frame_selected)
         self.animation_panel.frameDeleted.connect(self.on_frame_deleted)
         self.animation_panel.playStateChanged.connect(self.on_play_state_changed)
 
-        self.addWidget(top_splitter)
         self.addWidget(self.animation_panel)
         self.setSizes([600, 200])
 

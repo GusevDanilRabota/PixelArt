@@ -1,18 +1,25 @@
 # drawing_panel.py
 from PyQt5.QtWidgets import QWidget
-from PyQt5.QtCore import Qt, QRect
+from PyQt5.QtCore import Qt, QRect, pyqtSignal
 from PyQt5.QtGui import QPainter, QPen, QColor, QBrush
 
 class DrawingPanel(QWidget):
+    colorPicked = pyqtSignal(int)  # новый сигнал
+
     def __init__(self, palette_model, grid_width=32, grid_height=32, pixel_size=20):
         super().__init__()
         self.palette_model = palette_model
         self.pixel_size = pixel_size
         self.grid_width = grid_width
         self.grid_height = grid_height
-        self.pixels = {}                     # {(x, y): color_index}
-        self.onion_skin_frame = None         # {'pixels': dict, 'width': int, 'height': int}
-        self.onion_skin_alpha = 100          # прозрачность (0-255)
+        self.pixels = {}
+        self.onion_skin_frame = None
+        self.onion_skin_alpha = 100
+
+        # Новые атрибуты
+        self.current_tool = 'pen'        # 'pen', 'eraser', 'eyedropper'
+        self.zoom_level = pixel_size     # текущий размер пикселя
+
         self._update_minimum_size()
 
     def _update_minimum_size(self):
@@ -121,15 +128,50 @@ class DrawingPanel(QWidget):
         self.pixels.clear()
         self.update()
 
+    def set_tool(self, tool):
+        """Установить текущий инструмент."""
+        self.current_tool = tool
+
+    def set_zoom(self, pixel_size):
+        """Установить масштаб (размер пикселя в пикселях)."""
+        self.pixel_size = pixel_size
+        self._update_minimum_size()
+        self.update()
+
+    # Переопределяем обработчики мыши с учётом инструментов
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            self._draw_at_mouse(event)
+            if self.current_tool == 'eyedropper':
+                self._pick_color(event)
+            else:
+                self._draw_at_mouse(event)
 
     def mouseMoveEvent(self, event):
         if event.buttons() & Qt.LeftButton:
-            self._draw_at_mouse(event)
+            if self.current_tool in ('pen', 'eraser'):
+                self._draw_at_mouse(event)
 
     def _draw_at_mouse(self, event):
         x = event.x() // self.pixel_size
         y = event.y() // self.pixel_size
-        self.set_pixel(x, y, self.palette_model.active_color_index)
+        if 0 <= x < self.grid_width and 0 <= y < self.grid_height:
+            if self.current_tool == 'pen':
+                color_index = self.palette_model.active_color_index
+                self.pixels[(x, y)] = color_index
+            elif self.current_tool == 'eraser':
+                # Удаляем пиксель (ластик)
+                if (x, y) in self.pixels:
+                    del self.pixels[(x, y)]
+            self.update()
+
+    def _pick_color(self, event):
+        """Пипетка: выбрать цвет из текущего пикселя."""
+        x = event.x() // self.pixel_size
+        y = event.y() // self.pixel_size
+        if (x, y) in self.pixels:
+            index = self.pixels[(x, y)]
+            # Устанавливаем активный цвет в палитре
+            self.palette_model.active_color_index = index
+            # Оповещаем палитру об изменении выбора (нужен доступ к ColorPanel)
+            # Это будет сделано через сигналы в WorkArea
+            self.colorPicked.emit(index)

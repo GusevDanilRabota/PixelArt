@@ -20,6 +20,14 @@ class MainWindow(QMainWindow):
         self.left_panel = LeftPanel()
         self.work_area = WorkArea()
 
+        # Связываем инструменты и зум из левой панели
+        tools = self.left_panel.tools_panel
+        tools.toolChanged.connect(self.work_area.drawing_panel.set_tool)
+        tools.zoomChanged.connect(self.work_area.drawing_panel.set_zoom)
+
+        # При выборе цвета пипеткой обновляем выделение в палитре
+        self.work_area.drawing_panel.colorPicked.connect(self.on_color_picked)
+
         main_splitter = QSplitter(Qt.Horizontal)
         main_splitter.addWidget(self.left_panel)
         main_splitter.addWidget(self.work_area)
@@ -144,3 +152,9 @@ class MainWindow(QMainWindow):
         )
         if ok2:
             self.work_area.drawing_panel.set_grid_size(width, height)
+
+    def on_color_picked(self, index):
+        """Обновить выделение цвета в виджете палитры."""
+        pw = self.work_area.color_panel.palette_widget
+        if 0 <= index < len(pw.swatches):
+            pw.set_active_color(index)
