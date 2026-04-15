@@ -8,45 +8,63 @@ from PyQt5.QtCore import Qt
 class main_window_t(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PixelArt") # Заголовок окна
-        self.resize(1920, 1080)         # Размер окна (ширина, высота)
+        self.setWindowTitle("PixelArt")
+        self.resize(1920, 1080)
 
-        # Создаём сплиттер с горизонтальным разделением (лево-право)
-        splitter = QSplitter(Qt.Horizontal)
+        # Основной горизонтальный разделитель (левая панель / рабочая область)
+        main_splitter = QSplitter(Qt.Horizontal)
 
-        # --- Левая часть: вкладки ---
+        # --- Левая часть: вкладки (Файлы / Инструменты) ---
         tab_widget = QTabWidget()
-
-        # Вкладка "Файловое дерево"
         file_tree_tab = QTextEdit()
-        file_tree_tab.setPlainText("Здесь будет файловое дерево")
+        file_tree_tab.setPlainText("Файловое дерево")
         tab_widget.addTab(file_tree_tab, "Файлы")
-
-        # Вкладка "Инструменты"
         tools_tab = QTextEdit()
-        tools_tab.setPlainText("Здесь будут инструменты")
+        tools_tab.setPlainText("Инструменты")
         tab_widget.addTab(tools_tab, "Инструменты")
-
-        # Можно добавить ещё вкладки при необходимости
-
-        # --- Правая часть: рабочая область ---
-        work_space_widget = QTextEdit()
-        work_space_widget.setPlainText("Рабочая область")
-
-        # Минимальные ширины
         tab_widget.setMinimumWidth(200)
-        work_space_widget.setMinimumWidth(400)
 
-        # Добавляем в сплиттер
-        splitter.addWidget(tab_widget)
-        splitter.addWidget(work_space_widget)
+        # --- Правая часть: рабочая область, разбитая на три части ---
+        # Вертикальный разделитель для рабочей области
+        work_vertical_splitter = QSplitter(Qt.Vertical)
 
-        # Начальные пропорции
-        splitter.setSizes([300, 600])
+        # Верхняя часть: горизонтальный разделитель (рисование / цвет)
+        top_horizontal_splitter = QSplitter(Qt.Horizontal)
 
-        # Компоновка
+        # Левая верхняя: область рисования по пикселям
+        draw_widget = QTextEdit()
+        draw_widget.setPlainText("Область рисования (пиксельная сетка)")
+        draw_widget.setMinimumSize(400, 300)
+
+        # Правая верхняя: выбор цвета
+        color_widget = QTextEdit()
+        color_widget.setPlainText("Палитра / выбор цвета")
+        color_widget.setMinimumSize(150, 300)
+
+        top_horizontal_splitter.addWidget(draw_widget)
+        top_horizontal_splitter.addWidget(color_widget)
+        top_horizontal_splitter.setSizes([600, 200])  # начальные пропорции
+
+        # Нижняя часть: виджет анимаций
+        animation_widget = QTextEdit()
+        animation_widget.setPlainText("Шкала анимации / кадры")
+        animation_widget.setMinimumHeight(150)
+
+        # Добавляем верхний разделитель и нижний виджет в вертикальный разделитель
+        work_vertical_splitter.addWidget(top_horizontal_splitter)
+        work_vertical_splitter.addWidget(animation_widget)
+        work_vertical_splitter.setSizes([600, 200])  # высоты верхней и нижней частей
+
+        work_vertical_splitter.setMinimumWidth(500)
+
+        # Собираем основной разделитель
+        main_splitter.addWidget(tab_widget)
+        main_splitter.addWidget(work_vertical_splitter)
+        main_splitter.setSizes([250, 800])
+
+        # Размещаем основной разделитель в окне
         layout = QVBoxLayout()
-        layout.addWidget(splitter)
+        layout.addWidget(main_splitter)
         self.setLayout(layout)
 
 if __name__ == "__main__":
