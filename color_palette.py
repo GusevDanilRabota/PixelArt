@@ -1,7 +1,7 @@
 # color_palette.py
 from PyQt5.QtWidgets import (
     QWidget, QPushButton, QVBoxLayout, QLabel, QSpinBox,
-    QScrollArea, QGridLayout
+    QScrollArea, QGridLayout, QSizePolicy
 )
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QColor
@@ -48,24 +48,25 @@ class PaletteModel:
 
 
 class ColorSwatch(QPushButton):
-    """Виджет для отображения одного цвета в палитре."""
+    """Виджет для отображения одного цвета в палитре (только выбор)."""
     clicked_with_index = pyqtSignal(int)
 
     def __init__(self, index, color):
         super().__init__()
         self.index = index
         self.color = color
-        self.setFixedSize(30, 30)
         self.setCheckable(True)
         self.clicked.connect(self.emit_index)
-        self.update_style()  # обновляем фон в зависимости от цвета
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setFixedHeight(30)
+        self.update_style()
 
     def emit_index(self):
         self.clicked_with_index.emit(self.index)
 
     def update_style(self):
-        # Используем только цвет фона, границы и другие свойства задаются в QSS
-        self.setStyleSheet(f"background-color: {self.color.name()};")
+        style = f"background-color: {self.color.name()}; border: 1px solid #888;"
+        self.setStyleSheet(style)
 
 
 class PaletteWidget(QWidget):
@@ -124,17 +125,19 @@ class PaletteWidget(QWidget):
             self.swatches[self.model.active_color_index].setChecked(True)
 
     def relayout_swatches(self):
-        n = len(self.swatches)
-        if n == 0:
-            return
-        cols = (n + self.max_rows_per_column - 1) // self.max_rows_per_column
-        rows = self.max_rows_per_column
+        """Размещает образцы в один столбец, каждый растянут по ширине."""
+        # Удаляем старую сетку
+        for i in reversed(range(self.grid_layout.count())):
+            item = self.grid_layout.itemAt(i)
+            if item.widget():
+                item.widget().setParent(None)
+
+        # Добавляем образцы в одну колонку
         for idx, swatch in enumerate(self.swatches):
-            col = idx // rows
-            row = idx % rows
-            self.grid_layout.addWidget(swatch, row, col)
-        for c in range(cols):
-            self.grid_layout.setColumnStretch(c, 1)
+            self.grid_layout.addWidget(swatch, idx, 0)
+
+        # Единственная колонка растягивается на всю ширину
+        self.grid_layout.setColumnStretch(0, 1)
 
     def select_color(self, index):
         if self.model.active_color_index < len(self.swatches):
