@@ -5,6 +5,7 @@ from PyQt5.QtGui import QPainter, QPen, QColor, QBrush, QCursor
 
 class DrawingPanel(QWidget):
     colorPicked = pyqtSignal(int)  # новый сигнал
+    MAX_UNDO = 50
 
     def __init__(self, palette_model, grid_width=32, grid_height=32, pixel_size=20):
         super().__init__()
@@ -26,6 +27,25 @@ class DrawingPanel(QWidget):
         
         self.setFocusPolicy(Qt.StrongFocus)
         self._update_minimum_size()
+
+        self.undo_stack = []
+        self.redo_stack = []
+        self._push_undo_state()  # начальное состояние
+
+    def undo(self):
+        if len(self.undo_stack) > 1:  # последнее состояние текущее
+            current = self.undo_stack.pop()
+            self.redo_stack.append(current)
+            prev = self.undo_stack[-1]
+            self.pixels = {pos: idx for pos, idx in prev.items()}
+            self.update()
+
+    def redo(self):
+        if self.redo_stack:
+            state = self.redo_stack.pop()
+            self.undo_stack.append(state)
+            self.pixels = {pos: idx for pos, idx in state.items()}
+            self.update()
 
     def _update_minimum_size(self):
         self.setMinimumSize(
@@ -52,7 +72,9 @@ class DrawingPanel(QWidget):
     def load_frame(self, frame):
         """Загружает кадр в холст для редактирования."""
         self.pixels = {pos: idx for pos, idx in frame['pixels'].items()}
-        # Размеры кадра могут отличаться от текущего холста? Пока считаем, что совпадают.
+        self.undo_stack.clear()
+        self.redo_stack.clear()
+        self._push_undo_state()
         self.update()
 
     def paintEvent(self, event):
@@ -124,12 +146,25 @@ class DrawingPanel(QWidget):
                 h = min(cell_size, rect.bottom() - row)
                 painter.fillRect(col, row, w, h, color)
 
+    def _push_undo_state(self):
+        """Сохраняет текущее состояние пикселей в стек undo."""
+        state = {pos: idx for pos, idx in self.pixels.items()}
+        self.undo_stack.append(state)
+        if len(self.undo_stack) > self.MAX_UNDO:
+            self.undo_stack.pop(0)
+        self.redo_stack.clear()
+
     def set_pixel(self, x, y, color_index):
         if 0 <= x < self.grid_width and 0 <= y < self.grid_height:
-            self.pixels[(x, y)] = color_index
-            self.update()
+            # Сохраняем состояние перед изменением, если пиксель меняется
+            old = self.pixels.get((x, y))
+            if old != color_index:
+                self._push_undo_state()
+                self.pixels[(x, y)] = color_index
+                self.update()
 
     def clear(self):
+        self._push_undo_state()
         self.pixels.clear()
         self.update()
 
@@ -193,11 +228,15 @@ class DrawingPanel(QWidget):
         if 0 <= x < self.grid_width and 0 <= y < self.grid_height:
             if self.current_tool == 'pen':
                 color_index = self.palette_model.active_color_index
-                self.pixels[(x, y)] = color_index
+                if self.pixels.get((x, y)) != color_index:
+                    self._push_undo_state()
+                    self.pixels[(x, y)] = color_index
+                    self.update()
             elif self.current_tool == 'eraser':
                 if (x, y) in self.pixels:
+                    self._push_undo_state()
                     del self.pixels[(x, y)]
-            self.update()
+                    self.update()
 
     def _pick_color(self, event):
         x = (event.x() - self.pan_offset_x) // self.pixel_size

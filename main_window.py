@@ -1,10 +1,10 @@
 # main_window.py
 from PyQt5.QtWidgets import (
     QMainWindow, QSplitter, QVBoxLayout, QStatusBar,
-    QAction, QWidget, QInputDialog, QFileDialog, QMessageBox
+    QAction, QWidget, QInputDialog, QFileDialog, QMessageBox, QMenu
 )
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QImage, QPainter, QColor
+from PyQt5.QtGui import QImage, QPainter, QColor, QKeySequence
 from left_panel import LeftPanel
 from work_area import WorkArea
 from PIL import Image
@@ -41,6 +41,9 @@ class MainWindow(QMainWindow):
         layout.setSpacing(0)
         layout.addWidget(main_splitter)
         self.setCentralWidget(central_widget)
+
+        self._create_actions()
+        self._create_view_menu()
 
     def _create_menu_bar(self):
         menubar = self.menuBar()
@@ -158,3 +161,68 @@ class MainWindow(QMainWindow):
         pw = self.work_area.color_panel.palette_widget
         if 0 <= index < len(pw.swatches):
             pw.set_active_color(index)
+
+    def _create_actions(self):
+        # Инструменты
+        self.pen_action = QAction("Карандаш", self)
+        self.pen_action.setShortcut(QKeySequence("B"))
+        self.pen_action.triggered.connect(lambda: self.work_area.drawing_panel.set_tool('pen'))
+        self.addAction(self.pen_action)
+
+        self.eraser_action = QAction("Ластик", self)
+        self.eraser_action.setShortcut(QKeySequence("E"))
+        self.eraser_action.triggered.connect(lambda: self.work_area.drawing_panel.set_tool('eraser'))
+        self.addAction(self.eraser_action)
+
+        self.eyedropper_action = QAction("Пипетка", self)
+        self.eyedropper_action.setShortcut(QKeySequence("I"))
+        self.eyedropper_action.triggered.connect(lambda: self.work_area.drawing_panel.set_tool('eyedropper'))
+        self.addAction(self.eyedropper_action)
+
+        # Заливка (пока не реализована, добавим позже)
+        self.fill_action = QAction("Заливка", self)
+        self.fill_action.setShortcut(QKeySequence("G"))
+        # self.fill_action.triggered.connect(...)
+        self.addAction(self.fill_action)
+
+        # Отмена / повтор
+        self.undo_action = QAction("Отменить", self)
+        self.undo_action.setShortcut(QKeySequence.Undo)  # Ctrl+Z
+        self.undo_action.triggered.connect(self.work_area.drawing_panel.undo)
+        self.addAction(self.undo_action)
+
+        self.redo_action = QAction("Повторить", self)
+        self.redo_action.setShortcut(QKeySequence.Redo)  # Ctrl+Y или Ctrl+Shift+Z
+        self.redo_action.triggered.connect(self.work_area.drawing_panel.redo)
+        self.addAction(self.redo_action)
+
+        # Сохранение
+        self.save_action = QAction("Сохранить", self)
+        self.save_action.setShortcut(QKeySequence.Save)  # Ctrl+S
+        self.save_action.triggered.connect(self.on_save_file)
+        self.addAction(self.save_action)
+
+        # Переключение панелей
+        self.toggle_left_panel_action = QAction("Левая панель", self, checkable=True)
+        self.toggle_left_panel_action.setChecked(True)
+        self.toggle_left_panel_action.setShortcut(QKeySequence("Ctrl+1"))
+        self.toggle_left_panel_action.toggled.connect(self.left_panel.setVisible)
+        self.addAction(self.toggle_left_panel_action)
+
+        self.toggle_color_panel_action = QAction("Палитра", self, checkable=True)
+        self.toggle_color_panel_action.setChecked(True)
+        self.toggle_color_panel_action.setShortcut(QKeySequence("Ctrl+2"))
+        self.toggle_color_panel_action.toggled.connect(self.work_area.color_panel.setVisible)
+        self.addAction(self.toggle_color_panel_action)
+
+        self.toggle_animation_panel_action = QAction("Анимация", self, checkable=True)
+        self.toggle_animation_panel_action.setChecked(True)
+        self.toggle_animation_panel_action.setShortcut(QKeySequence("Ctrl+3"))
+        self.toggle_animation_panel_action.toggled.connect(self.work_area.animation_panel.setVisible)
+        self.addAction(self.toggle_animation_panel_action)
+
+    def _create_view_menu(self):
+        view_menu = self.menuBar().addMenu("Вид")
+        view_menu.addAction(self.toggle_left_panel_action)
+        view_menu.addAction(self.toggle_color_panel_action)
+        view_menu.addAction(self.toggle_animation_panel_action)
