@@ -74,19 +74,22 @@ class MainWindow(QMainWindow):
         self.setStatusBar(status)
 
     def on_new_file(self):
-        # Сброс размера холста к 32x32
+        # Сброс анимации
+        self.work_area.animation_model.clear()
+        self.work_area.animation_panel.clear_list()
+        self.work_area.drawing_panel.clear_onion_skin()
+        # Сброс холста
         self.work_area.drawing_panel.set_grid_size(32, 32)
-        # Сброс разрядности палитры к 8
         self.work_area.palette_model.set_bit_depth(8)
         self.work_area.color_panel.palette_widget.bit_depth_spin.setValue(8)
         self.work_area.color_panel.palette_widget.update_palette()
-        # Очистка пикселей
         self.work_area.drawing_panel.clear()
 
     def on_open_file(self):
         print("Открыть файл")
 
     def on_save_file(self):
+        # Сохраняем анимацию как последовательность кадров? Пока упрощённо: сохраняем текущий кадр
         file_path, _ = QFileDialog.getSaveFileName(self, "Сохранить изображение", "", "PNG Files (*.png)")
         if not file_path:
             return

@@ -10,7 +10,9 @@ class DrawingPanel(QWidget):
         self.pixel_size = pixel_size
         self.grid_width = grid_width
         self.grid_height = grid_height
-        self.pixels = {}  # {(x, y): index}
+        self.pixels = {}                     # {(x, y): color_index}
+        self.onion_skin_frame = None         # {'pixels': dict, 'width': int, 'height': int}
+        self.onion_skin_alpha = 100          # прозрачность (0-255)
         self._update_minimum_size()
 
     def _update_minimum_size(self):
@@ -26,11 +28,25 @@ class DrawingPanel(QWidget):
         self._update_minimum_size()
         self.update()
 
+    def set_onion_skin(self, frame):
+        """Устанавливает кадр для отображения полупрозрачным слоем."""
+        self.onion_skin_frame = frame
+        self.update()
+
+    def clear_onion_skin(self):
+        self.onion_skin_frame = None
+        self.update()
+
+    def load_frame(self, frame):
+        """Загружает кадр в холст для редактирования."""
+        self.pixels = {pos: idx for pos, idx in frame['pixels'].items()}
+        # Размеры кадра могут отличаться от текущего холста? Пока считаем, что совпадают.
+        self.update()
+
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing, False)
 
-        # Размеры холста в пикселях
         canvas_width = self.grid_width * self.pixel_size
         canvas_height = self.grid_height * self.pixel_size
         canvas_rect = QRect(0, 0, canvas_width, canvas_height)
@@ -41,7 +57,11 @@ class DrawingPanel(QWidget):
         # Шахматный фон внутри холста
         self._draw_transparency_background(painter, canvas_rect)
 
-        # Рисуем пиксели
+        # Если есть onion skin, рисуем его полупрозрачным
+        if self.onion_skin_frame:
+            self._draw_onion_skin(painter)
+
+        # Рисуем пиксели текущего холста
         for (x, y), index in self.pixels.items():
             color = self.palette_model.get_color(index)
             if color.alpha() > 0:
@@ -59,6 +79,23 @@ class DrawingPanel(QWidget):
             painter.drawLine(x, 0, x, canvas_height)
         for y in range(0, canvas_height + 1, self.pixel_size):
             painter.drawLine(0, y, canvas_width, y)
+
+    def _draw_onion_skin(self, painter):
+        """Рисует предыдущий кадр с заданной прозрачностью."""
+        frame = self.onion_skin_frame
+        if not frame:
+            return
+        # Проверяем совместимость размеров (должны совпадать)
+        for (x, y), index in frame['pixels'].items():
+            if 0 <= x < self.grid_width and 0 <= y < self.grid_height:
+                color = self.palette_model.get_color(index)
+                if color.alpha() > 0:
+                    # Создаём полупрозрачный цвет
+                    onion_color = QColor(color.red(), color.green(), color.blue(), self.onion_skin_alpha)
+                    painter.fillRect(
+                        x * self.pixel_size, y * self.pixel_size,
+                        self.pixel_size, self.pixel_size, onion_color
+                    )
 
     def _draw_transparency_background(self, painter, rect):
         cell_size = 10
