@@ -1,6 +1,6 @@
+# work_area.py
 from PyQt5.QtWidgets import QSplitter, QWidget, QHBoxLayout, QVBoxLayout
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap, QImage
 from drawing_panel import DrawingPanel
 from color_panel import ColorPanel
 from animation_panel import AnimationPanel, AnimationModel
@@ -44,15 +44,14 @@ class WorkArea(QSplitter):
 
         self.addWidget(top_widget)
 
-        # --- Нижняя часть: панель анимации ---
-        self.animation_panel = AnimationPanel(self.animation_model)
+        # --- Нижняя часть: панель анимации с предпросмотром ---
+        self.animation_panel = AnimationPanel(self.animation_model, self.palette_model)
         self.animation_panel.frameAdded.connect(self.on_add_frame)
         self.animation_panel.frameSelected.connect(self.on_frame_selected)
         self.animation_panel.frameDeleted.connect(self.on_frame_deleted)
-        self.animation_panel.playStateChanged.connect(self.on_play_state_changed)
 
         self.addWidget(self.animation_panel)
-        self.setSizes([600, 200])
+        self.setSizes([600, 250])
 
         self.color_panel.palette_widget.colorSelected.connect(self.on_color_selected)
 
@@ -66,28 +65,12 @@ class WorkArea(QSplitter):
         h = self.drawing_panel.grid_height
         new_index = self.animation_model.add_frame(pixels, w, h)
 
-        pixmap = self.create_frame_thumbnail(new_index)
+        pixmap = self.animation_panel.create_frame_thumbnail(new_index)
         self.animation_panel.add_frame_to_list(new_index, pixmap)
 
-        # Очищаем холст для рисования следующего кадра
-        self.drawing_panel.clear()
-
-        # Устанавливаем onion skin - ТОЛЬКО ЧТО ДОБАВЛЕННЫЙ кадр (последний)
+        # Устанавливаем onion skin - только что добавленный кадр (последний)
         last_frame = self.animation_model.get_frame(new_index)
         self.drawing_panel.set_onion_skin(last_frame)
-
-    def create_frame_thumbnail(self, index):
-        frame = self.animation_model.get_frame(index)
-        if not frame:
-            return QPixmap()
-        w, h = frame['width'], frame['height']
-        image = QImage(w, h, QImage.Format_ARGB32)
-        image.fill(Qt.transparent)
-        for (x, y), idx in frame['pixels'].items():
-            color = self.palette_model.get_color(idx)
-            image.setPixelColor(x, y, color)
-        pixmap = QPixmap.fromImage(image).scaled(50, 50, Qt.KeepAspectRatio, Qt.FastTransformation)
-        return pixmap
 
     def on_frame_selected(self, index):
         frame = self.animation_model.get_frame(index)
@@ -110,9 +93,3 @@ class WorkArea(QSplitter):
         else:
             self.drawing_panel.clear()
             self.drawing_panel.clear_onion_skin()
-
-    def on_play_state_changed(self, playing):
-        self.drawing_panel.setEnabled(not playing)
-        if playing:
-            if self.animation_panel.frame_list.currentRow() < 0 and self.animation_model.frames:
-                self.animation_panel.frame_list.setCurrentRow(0)

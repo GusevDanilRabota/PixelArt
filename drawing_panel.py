@@ -1,7 +1,7 @@
 # drawing_panel.py
 from PyQt5.QtWidgets import QWidget
-from PyQt5.QtCore import Qt, QRect, pyqtSignal
-from PyQt5.QtGui import QPainter, QPen, QColor, QBrush
+from PyQt5.QtCore import Qt, QRect, pyqtSignal, QPoint
+from PyQt5.QtGui import QPainter, QPen, QColor, QBrush, QCursor
 
 class DrawingPanel(QWidget):
     colorPicked = pyqtSignal(int)  # новый сигнал
@@ -15,11 +15,16 @@ class DrawingPanel(QWidget):
         self.pixels = {}
         self.onion_skin_frame = None
         self.onion_skin_alpha = 100
-
-        # Новые атрибуты
-        self.current_tool = 'pen'        # 'pen', 'eraser', 'eyedropper'
-        self.zoom_level = pixel_size     # текущий размер пикселя
-
+        self.current_tool = 'pen'
+        
+        # Панорамирование
+        self.pan_offset_x = 0
+        self.pan_offset_y = 0
+        self.pan_active = False
+        self.last_pan_pos = None
+        self.space_pressed = False
+        
+        self.setFocusPolicy(Qt.StrongFocus)
         self._update_minimum_size()
 
     def _update_minimum_size(self):
@@ -138,40 +143,102 @@ class DrawingPanel(QWidget):
         self._update_minimum_size()
         self.update()
 
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Space:
+            self.space_pressed = True
+            self.setCursor(Qt.OpenHandCursor)
+            event.accept()
+
+    def keyReleaseEvent(self, event):
+        if event.key() == Qt.Key_Space:
+            self.space_pressed = False
+            self.setCursor(Qt.ArrowCursor)
+            self.pan_active = False
+            event.accept()
+
     # Переопределяем обработчики мыши с учётом инструментов
     def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MiddleButton or (self.space_pressed and event.button() == Qt.LeftButton):
+            self.pan_active = True
+            self.last_pan_pos = event.pos()
+            self.setCursor(Qt.ClosedHandCursor)
+            event.accept()
+        elif event.button() == Qt.LeftButton:
             if self.current_tool == 'eyedropper':
                 self._pick_color(event)
             else:
                 self._draw_at_mouse(event)
 
     def mouseMoveEvent(self, event):
-        if event.buttons() & Qt.LeftButton:
+        if self.pan_active:
+            delta = event.pos() - self.last_pan_pos
+            self.pan_offset_x += delta.x()
+            self.pan_offset_y += delta.y()
+            self.last_pan_pos = event.pos()
+            self.update()
+            event.accept()
+        elif event.buttons() & Qt.LeftButton:
             if self.current_tool in ('pen', 'eraser'):
                 self._draw_at_mouse(event)
 
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MiddleButton or (self.space_pressed and event.button() == Qt.LeftButton):
+            self.pan_active = False
+            self.setCursor(Qt.OpenHandCursor if self.space_pressed else Qt.ArrowCursor)
+            event.accept()
+
     def _draw_at_mouse(self, event):
-        x = event.x() // self.pixel_size
-        y = event.y() // self.pixel_size
+        x = (event.x() - self.pan_offset_x) // self.pixel_size
+        y = (event.y() - self.pan_offset_y) // self.pixel_size
         if 0 <= x < self.grid_width and 0 <= y < self.grid_height:
             if self.current_tool == 'pen':
                 color_index = self.palette_model.active_color_index
                 self.pixels[(x, y)] = color_index
             elif self.current_tool == 'eraser':
-                # Удаляем пиксель (ластик)
                 if (x, y) in self.pixels:
                     del self.pixels[(x, y)]
             self.update()
 
     def _pick_color(self, event):
-        """Пипетка: выбрать цвет из текущего пикселя."""
-        x = event.x() // self.pixel_size
-        y = event.y() // self.pixel_size
+        x = (event.x() - self.pan_offset_x) // self.pixel_size
+        y = (event.y() - self.pan_offset_y) // self.pixel_size
         if (x, y) in self.pixels:
             index = self.pixels[(x, y)]
-            # Устанавливаем активный цвет в палитре
             self.palette_model.active_color_index = index
-            # Оповещаем палитру об изменении выбора (нужен доступ к ColorPanel)
-            # Это будет сделано через сигналы в WorkArea
             self.colorPicked.emit(index)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing, False)
+
+        # Применяем смещение панорамирования
+        painter.translate(self.pan_offset_x, self.pan_offset_y)
+
+        canvas_width = self.grid_width * self.pixel_size
+        canvas_height = self.grid_height * self.pixel_size
+        canvas_rect = QRect(0, 0, canvas_width, canvas_height)
+
+        # Фон вокруг холста
+        painter.fillRect(self.rect(), QBrush(Qt.lightGray))
+
+        # Шахматный фон внутри холста
+        self._draw_transparency_background(painter, canvas_rect)
+
+        if self.onion_skin_frame:
+            self._draw_onion_skin(painter)
+
+        for (x, y), index in self.pixels.items():
+            color = self.palette_model.get_color(index)
+            if color.alpha() > 0:
+                painter.fillRect(
+                    x * self.pixel_size, y * self.pixel_size,
+                    self.pixel_size, self.pixel_size, color
+                )
+
+        pen = QPen(QColor(200, 200, 200))
+        pen.setWidth(1)
+        painter.setPen(pen)
+        for x in range(0, canvas_width + 1, self.pixel_size):
+            painter.drawLine(x, 0, x, canvas_height)
+        for y in range(0, canvas_height + 1, self.pixel_size):
+            painter.drawLine(0, y, canvas_width, y)

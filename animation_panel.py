@@ -1,10 +1,10 @@
 # animation_panel.py
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QListWidget, QListWidgetItem, QLabel, QScrollArea
+    QListWidget, QListWidgetItem, QLabel, QSpinBox, QSizePolicy
 )
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer
-from PyQt5.QtGui import QPixmap, QImage, QColor, QIcon
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QSize
+from PyQt5.QtGui import QPixmap, QImage, QIcon
 
 class AnimationModel:
     """Модель данных анимации (последовательность кадров)."""
@@ -14,7 +14,6 @@ class AnimationModel:
 
     def add_frame(self, pixels, width, height):
         """Добавляет кадр в конец списка."""
-        # Глубокое копирование словаря пикселей
         frame_pixels = {pos: idx for pos, idx in pixels.items()}
         self.frames.append({
             'pixels': frame_pixels,
@@ -43,18 +42,20 @@ class AnimationModel:
 
 
 class AnimationPanel(QWidget):
-    """Панель управления анимацией."""
-    frameAdded = pyqtSignal()               # при добавлении кадра
-    frameSelected = pyqtSignal(int)         # при выборе кадра (индекс)
-    frameDeleted = pyqtSignal(int)          # при удалении кадра
-    playStateChanged = pyqtSignal(bool)     # True - играет, False - стоп
+    """Панель управления анимацией с предпросмотром."""
+    frameAdded = pyqtSignal()
+    frameSelected = pyqtSignal(int)   # выбор кадра для редактирования
+    frameDeleted = pyqtSignal(int)
 
-    def __init__(self, model):
+    def __init__(self, model, palette_model):
         super().__init__()
         self.model = model
+        self.palette_model = palette_model
         self.play_timer = QTimer()
-        self.play_timer.timeout.connect(self.next_frame)
+        self.play_timer.timeout.connect(self.next_preview_frame)
         self.is_playing = False
+        self.playback_index = 0
+        self.fps = 10
         self.setup_ui()
 
     def setup_ui(self):
@@ -77,44 +78,77 @@ class AnimationPanel(QWidget):
         self.frame_list = QListWidget()
         self.frame_list.setSelectionMode(QListWidget.SingleSelection)
         self.frame_list.itemSelectionChanged.connect(self.on_frame_selection_changed)
-        self.frame_list.setIconSize(self.frame_list.iconSize() * 0.5)
+        self.frame_list.setIconSize(QSize(50, 50))
         layout.addWidget(self.frame_list)
 
-        self.setMinimumHeight(150)
+        # Предпросмотр анимации
+        preview_label_title = QLabel("Предпросмотр анимации:")
+        layout.addWidget(preview_label_title)
+        self.preview_label = QLabel()
+        self.preview_label.setMinimumHeight(120)
+        self.preview_label.setAlignment(Qt.AlignCenter)
+        self.preview_label.setStyleSheet("background-color: #1e1e1e; border: 1px solid #444;")
+        self.preview_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        layout.addWidget(self.preview_label)
 
-    def on_add_frame(self):
-        """Сигнал добавления кадра (будет обработан в WorkArea)."""
-        self.frameAdded.emit()
+        # Управление FPS
+        fps_layout = QHBoxLayout()
+        fps_layout.addWidget(QLabel("FPS:"))
+        self.fps_spin = QSpinBox()
+        self.fps_spin.setRange(1, 60)
+        self.fps_spin.setValue(10)
+        self.fps_spin.valueChanged.connect(self.on_fps_changed)
+        fps_layout.addWidget(self.fps_spin)
+        fps_layout.addStretch()
+        layout.addLayout(fps_layout)
 
-    def add_frame_to_list(self, index, pixmap=None):
-        """Добавляет визуальный элемент в список кадров."""
-        item = QListWidgetItem(f"Кадр {index+1}")
-        if pixmap:
-            item.setIcon(QIcon(pixmap))  # преобразование QPixmap -> QIcon
-        self.frame_list.addItem(item)
-        self.frame_list.setCurrentRow(index)
+        self.update_preview()
 
-    def on_frame_selection_changed(self):
-        selected = self.frame_list.currentRow()
-        if selected >= 0 and selected < len(self.model.frames):
-            self.frameSelected.emit(selected)
+    def create_frame_thumbnail(self, index):
+        """Создаёт QPixmap для кадра по индексу."""
+        frame = self.model.get_frame(index)
+        if not frame:
+            return QPixmap()
+        w, h = frame['width'], frame['height']
+        image = QImage(w, h, QImage.Format_ARGB32)
+        image.fill(Qt.transparent)
+        for (x, y), idx in frame['pixels'].items():
+            color = self.palette_model.get_color(idx)
+            image.setPixelColor(x, y, color)
+        pixmap = QPixmap.fromImage(image)
+        return pixmap
 
-    def on_delete_frame(self):
-        selected = self.frame_list.currentRow()
-        if selected >= 0:
-            self.frameDeleted.emit(selected)
-            self.frame_list.takeItem(selected)
-            # Обновляем номера кадров в списке
-            for i in range(self.frame_list.count()):
-                self.frame_list.item(i).setText(f"Кадр {i+1}")
+    def update_preview(self):
+        """Обновить изображение в preview_label."""
+        if 0 <= self.playback_index < len(self.model.frames):
+            pixmap = self.create_frame_thumbnail(self.playback_index)
+            # Масштабируем с сохранением пропорций под размер label
+            scaled = pixmap.scaled(
+                self.preview_label.size(),
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation
+            )
+            self.preview_label.setPixmap(scaled)
+        else:
+            self.preview_label.clear()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.update_preview()
+
+    def on_fps_changed(self, value):
+        self.fps = value
+        if self.is_playing:
+            self.play_timer.setInterval(1000 // self.fps)
 
     def toggle_play(self):
         if not self.is_playing:
             if len(self.model.frames) > 0:
                 self.is_playing = True
                 self.play_btn.setText("⏸ Стоп")
-                self.play_timer.start(100)  # 10 кадров в секунду
-                self.playStateChanged.emit(True)
+                current = self.frame_list.currentRow()
+                self.playback_index = current if current >= 0 else 0
+                self.play_timer.start(1000 // self.fps)
         else:
             self.stop_playback()
 
@@ -122,20 +156,42 @@ class AnimationPanel(QWidget):
         self.is_playing = False
         self.play_btn.setText("▶ Воспроизвести")
         self.play_timer.stop()
-        self.playStateChanged.emit(False)
 
-    def next_frame(self):
-        """Переключение на следующий кадр при воспроизведении."""
+    def next_preview_frame(self):
         if not self.is_playing or len(self.model.frames) == 0:
             return
-        current = self.frame_list.currentRow()
-        next_idx = (current + 1) % len(self.model.frames)
-        self.frame_list.setCurrentRow(next_idx)
-        self.frameSelected.emit(next_idx)
+        self.playback_index = (self.playback_index + 1) % len(self.model.frames)
+        self.update_preview()
+
+    def on_add_frame(self):
+        self.frameAdded.emit()
+
+    def add_frame_to_list(self, index, pixmap=None):
+        item = QListWidgetItem(f"Кадр {index+1}")
+        if pixmap:
+            item.setIcon(QIcon(pixmap))
+        self.frame_list.addItem(item)
+        self.frame_list.setCurrentRow(index)
+        self.playback_index = index
+        self.update_preview()
+
+    def on_frame_selection_changed(self):
+        selected = self.frame_list.currentRow()
+        if selected >= 0:
+            self.frameSelected.emit(selected)
+            if not self.is_playing:
+                self.playback_index = selected
+                self.update_preview()
+
+    def on_delete_frame(self):
+        selected = self.frame_list.currentRow()
+        if selected >= 0:
+            self.frameDeleted.emit(selected)
+            self.frame_list.takeItem(selected)
+            for i in range(self.frame_list.count()):
+                self.frame_list.item(i).setText(f"Кадр {i+1}")
+            self.update_preview()
 
     def clear_list(self):
         self.frame_list.clear()
-
-    def update_after_delete(self, new_current_index):
-        if new_current_index >= 0 and new_current_index < self.frame_list.count():
-            self.frame_list.setCurrentRow(new_current_index)
+        self.update_preview()

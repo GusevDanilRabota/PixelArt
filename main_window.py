@@ -97,7 +97,7 @@ class MainWindow(QMainWindow):
         print("Открыть файл")
 
     def on_save_file(self):
-        # Сохраняем анимацию как последовательность кадров? Пока упрощённо: сохраняем текущий кадр
+        # Сохраняем текущий кадр как PNG с индексированной палитрой
         file_path, _ = QFileDialog.getSaveFileName(self, "Сохранить изображение", "", "PNG Files (*.png)")
         if not file_path:
             return
